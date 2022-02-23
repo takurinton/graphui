@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Flex } from '@chakra-ui/react';
-import { buildSchema, DocumentNode, GraphQLSchema, ObjectTypeDefinitionNode, parse, print, printIntrospectionSchema, printSchema } from "graphql";
+import { ASTNode, buildSchema, DocumentNode, GraphQLSchema, ObjectTypeDefinitionNode, parse, print, printIntrospectionSchema, printSchema } from "graphql";
 import { Provider } from './context';
-import { Maybe } from "graphql/jsutils/Maybe";
 
 const initialQuery = `
 query findUser($userId: ID!) {
@@ -44,7 +43,27 @@ const getQueryAstNode = (schema: GraphQLSchema) => {
     return astNode;
 }
 
-const buildQuery = (node: Maybe<ObjectTypeDefinitionNode>) => {
+const buildQuery = (node: any): any => {
+    console.log(node);
+    if (node.kind === 'ObjectTypeDefinition') {
+        return buildQuery(node.fields);
+    }
+
+    if (Array.isArray(node)) {
+        return node.map(n => buildQuery(n));
+    }
+
+    if (node.kind === 'FieldDefinition') {
+        return buildQuery(node.name);
+    }
+
+    if (node.kind === 'Name') {
+        return node.value;
+    }
+
+    if (node.kind === undefined) {
+        // TODO
+    }
 }
 
 export const GraphUI = () => {
@@ -56,6 +75,7 @@ export const GraphUI = () => {
     const schemaObj = buildSchema(schema);
     const node = getQueryAstNode(schemaObj);
     const q = buildQuery(node);
+    console.log(q);
 
     return (
         <>
