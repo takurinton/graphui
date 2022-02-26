@@ -105,12 +105,17 @@ const generateGraphQLQuery = ({
 
     // GraphQLInputObjectType には getFields() 関数がいるので呼べるけど、エラーになるので一旦退避
     // @ts-ignore
-    const isFieldsExists = currentQureyType.getFields();
-    if (isFieldsExists) {
-        console.log('hoge');
+    const fields = currentQureyType.getFields()
+    if (fields) {
+        // ここに関してはもう少し考慮することがある
+        // 例えばネストしてる場合、これは再帰的に generateQuery 関数を呼ぶ必要がある
+        childQuery = Object.keys(fields)
+            .map(field => {
+                return field;
+            }).join('\n');
     }
 
-    if (!(isFieldsExists && !childQuery)) {
+    if (!('query' in currentQureyType?.toConfig() && !childQuery)) {
         queryString = `${'    '.repeat(currentDepth)}${curerentQueryField.name}`;
         if (curerentQueryField.args.length > 0) {
             const map = getFieldArgsDict({
@@ -131,6 +136,7 @@ const generateGraphQLQuery = ({
             queryString += ` {\n${childQuery}\n${'    '.repeat(currentDepth)}}`;
         }
     }
+
 }
 
 export const GraphUI = () => {
