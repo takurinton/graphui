@@ -1,7 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flex } from '@chakra-ui/react';
-import { ASTNode, buildSchema, DocumentNode, GraphQLSchema, ObjectTypeDefinitionNode, parse, print, printIntrospectionSchema, printSchema } from "graphql";
+import {
+    ASTNode,
+    buildSchema,
+    DocumentNode,
+    GraphQLField,
+    GraphQLNamedType,
+    GraphQLSchema,
+    parse,
+    print,
+} from "graphql";
 import { Provider } from './context';
+
 
 const initialQuery = `
 query findUser($userId: ID!) {
@@ -24,10 +34,17 @@ type User {
     role: Role!
 }
 
+type Hoge {
+    a: Int!
+    b: String!
+    c: Role
+}
+
 type Query {
     me: User!
     user(id: ID!): User
     allUsers: [User]
+    hoge: Hoge
 }
 
 enum Role {
@@ -36,46 +53,100 @@ enum Role {
 }
 `;
 
-const getQueryAstNode = (schema: GraphQLSchema) => {
-    const queryObj = schema.getQueryType();
-    const astNode = queryObj?.astNode;
+// inspired by https://github.com/timqian/gql-generator/blob/20f76a0f37f31f961f8d5599cc115748c89fb614/index.js#L39-L55
+const getFieldArgsDict = ({
+    curerentQueryField,
+    duplicateArgCounts,
+    map = {},
+}: {
+    curerentQueryField: GraphQLField<any, any, any>
+    duplicateArgCounts: any;
+    map: { [key: string]: any }
+}) => curerentQueryField.args.reduce((obj, argument) => {
+    if (argument.name in duplicateArgCounts) {
+        const index = duplicateArgCounts[argument.name] + 1;
+        duplicateArgCounts[argument.name] = index;
+        // @ts-ignore
+        obj[`${arg.name}${index}`] = argument;
+    } else if (map[argument.name]) {
+        duplicateArgCounts[argument.name] = 1;
+        // @ts-ignore
+        obj[`${arg.name}1`] = argument;
+    } else {
+        // @ts-ignore
+        obj[argument.name] = argument;
+    }
+    return obj;
+}, {});
 
-    return astNode;
-}
+const generateGraphQLQuery = ({
+    currentQueryName,
+    currentDepth = 1, // インデント
+    argumentsDict = {},
+    duplicateArgCounts = {},
+    schema,
+}: {
+    currentQueryName: string;
+    currentDepth?: number;
+    argumentsDict?: any;
+    duplicateArgCounts?: any;
+    schema: string;
+}) => {
+    // geaphqlSchema も引数かな
+    const geaphqlSchema = buildSchema(schema);
 
-const buildQuery = (node: any): any => {
-    console.log(node);
-    if (node.kind === 'ObjectTypeDefinition') {
-        return buildQuery(node.fields);
+    // {me: {…}, user: {…}, allUsers: {…}}
+    // 現在の node の AST を取得
+    const curerentQueryField = geaphqlSchema.toConfig().query?.getFields()[currentQueryName] as GraphQLField<any, any, any>;
+    const currentQueryTypeName = curerentQueryField.type.toString().replace(/[[\]!]/g, '');
+    const currentQureyType = geaphqlSchema.getType(currentQueryTypeName) as GraphQLNamedType;
+    let queryString = '';
+    let childQuery = '';
+
+    const isQueryExists = 'query' in currentQureyType?.toConfig();
+    if (isQueryExists) {
+        console.log('hoge');
     }
 
-    if (Array.isArray(node)) {
-        return node.map(n => buildQuery(n));
-    }
+    if (!(isQueryExists && !childQuery)) {
+        queryString = `${'    '.repeat(currentDepth)}${curerentQueryField.name}`;
+        if (curerentQueryField.args.length > 0) {
+            const map = getFieldArgsDict({
+                curerentQueryField,
+                duplicateArgCounts,
+                map: argumentsDict,
+            });
+            Object.assign(argumentsDict, map);
+            const variables = Object.entries(map)
+                // @ts-ignore
+                .map(([varName, argument]) => `${argument.name}: $${varName}`)
+                .join(', ');
 
-    if (node.kind === 'FieldDefinition') {
-        return buildQuery(node.name);
-    }
+            queryString += `(${variables})`;
+        }
 
-    if (node.kind === 'Name') {
-        return node.value;
-    }
-
-    if (node.kind === undefined) {
-        // TODO
+        if (childQuery) {
+            queryString += `{\n${childQuery}\n${'    '.repeat(currentDepth)}}`;
+        }
     }
 }
 
 export const GraphUI = () => {
     // set current query string
-    const [query, setQuery] = useState(initialQuery)
+    const [query, setQuery] = useState('')
     // query to astnode
     const [ast, setAst] = useState<DocumentNode>(parse(initialQuery));
-    // wip: schema to query
+
     const schemaObj = buildSchema(schema);
-    const node = getQueryAstNode(schemaObj);
-    const q = buildQuery(node);
-    console.log(q);
+    const queryFields = schemaObj.toConfig().query?.getFields() as { [key: string]: GraphQLField<any, any, any> };
+    Object.keys(queryFields).map(q => {
+        const queryNode = generateGraphQLQuery({ schema, currentQueryName: q });
+    })
+
+    useEffect(() => {
+        // TODO: query を作成する関数をひとまとめにしてここで query にセットする
+        setQuery(initialQuery);
+    }, []);
 
     return (
         <>
