@@ -14,10 +14,8 @@ import {
     print,
     parse,
     ASTNode,
-    SelectionSetNode,
-    GraphQLSchema,
 } from "graphql";
-import { Provider } from './context';
+import { Provider, useTransformerContext } from './context';
 import Select from 'react-select';
 
 // inspired by https://github.com/timqian/gql-generator/blob/20f76a0f37f31f961f8d5599cc115748c89fb614/index.js#L39-L55
@@ -122,7 +120,7 @@ const getQuerysMap = ({
     return res;
 }
 
-const getFields = ({
+const getFieldsForReactSelect = ({
     schema,
     name
 }: {
@@ -280,6 +278,38 @@ const RootRenderer = ({ node }: { node: ASTNode }) => {
     return <Box>UnknownNode: {node.kind}</Box>;
 }
 
+
+const SelectBox = ({
+    selectedFields,
+    fields,
+    onChange,
+}: {
+    selectedFields: { label: string; value: string }[];
+    fields: { label: string; value: string }[];
+    onChange: (newValue: any) => void;
+}) => {
+    const api = useTransformerContext();
+
+    const handleChangeFields = useCallback((newValue) => {
+        api.updateNode(newValue);
+        onChange(newValue)
+    }, [selectedFields]);
+
+    return (
+        <Box>
+            <Select
+                defaultValue={selectedFields}
+                isMulti
+                name="colors"
+                options={fields}
+                className="basic-multi-select"
+                classNamePrefix="select"
+                onChange={handleChangeFields}
+            />
+        </Box>
+    )
+}
+
 export const GraphUI = ({
     schema
 }: {
@@ -295,15 +325,10 @@ export const GraphUI = ({
     ${querysMap[initialQueryName]}
 }`)
     // query to astnode
-    const [ast, setAst] = useState<DocumentNode | any>(null);
+    const [ast, setAst] = useState<DocumentNode | any>(parse(query));
     // fields
-    const fields = getFields({ schema, name: queryName });
+    const fields = getFieldsForReactSelect({ schema, name: queryName });
     const [selectedFields, setSelectedFields] = useState(fields);
-
-    useEffect(() => {
-        const _ast = parse(query);
-        setAst(_ast);
-    }, []);
 
     const handleChangeQueryName = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
@@ -316,12 +341,6 @@ export const GraphUI = ({
         setAst(parse(newQuery));
     }, [queryName, query]);
 
-
-    const handleChangeFields = useCallback((newValue) => {
-        console.log(newValue);
-        setSelectedFields(newValue);
-    }, [selectedFields]);
-
     return (
         <>
             <Provider
@@ -329,24 +348,17 @@ export const GraphUI = ({
                 onChangeNode={ast => {
                     setAst(ast);
                     setQuery(print(ast));
-                    console.log(print(ast))
                 }}
             >
                 <Flex>
                     <chakra.p fontSize="md">query name: </chakra.p>
                     <Input size="md" placeholder='query name' value={queryName} onChange={(event) => handleChangeQueryName(event)} />
                 </Flex>
-                <Box>
-                    <Select
-                        defaultValue={selectedFields}
-                        isMulti
-                        name="colors"
-                        options={fields}
-                        className="basic-multi-select"
-                        classNamePrefix="select"
-                        onChange={handleChangeFields}
-                    />
-                </Box>
+                <SelectBox
+                    selectedFields={selectedFields}
+                    fields={fields}
+                    onChange={setSelectedFields}
+                />
                 <Box>
                     {/* {ast === null ? <>loading</> : <RootRenderer node={ast} />} */}
                     <Box pb={3} />
