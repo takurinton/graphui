@@ -136,7 +136,23 @@ const generateGraphQLQuery = ({
             queryString += ` {\n${childQuery}\n${'    '.repeat(currentDepth)}}`;
         }
     }
+    return queryString;
+}
 
+// schema to map(key => query name, value => query)
+const getQuerysMap = ({
+    schema
+}: {
+    schema: string;
+}) => {
+    let res: { [key: string]: string } = {};
+    const schemaObj = buildSchema(schema);
+    const queryFields = schemaObj.toConfig().query?.getFields() as { [key: string]: GraphQLField<any, any, any> };
+    Object.keys(queryFields).map(q => {
+        const queryNode = generateGraphQLQuery({ schema, currentQueryName: q });
+        res[q] = queryNode;
+    })
+    return res;
 }
 
 export const GraphUI = () => {
@@ -145,12 +161,7 @@ export const GraphUI = () => {
     // query to astnode
     const [ast, setAst] = useState<DocumentNode>(parse(initialQuery));
 
-    const schemaObj = buildSchema(schema);
-    const queryFields = schemaObj.toConfig().query?.getFields() as { [key: string]: GraphQLField<any, any, any> };
-    Object.keys(queryFields).map(q => {
-        const queryNode = generateGraphQLQuery({ schema, currentQueryName: q });
-    })
-
+    const querysMap = getQuerysMap({ schema });
     useEffect(() => {
         // TODO: query を作成する関数をひとまとめにしてここで query にセットする
         setQuery(initialQuery);
