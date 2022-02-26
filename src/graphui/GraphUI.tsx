@@ -103,12 +103,14 @@ const generateGraphQLQuery = ({
     let queryString = '';
     let childQuery = '';
 
-    const isQueryExists = 'query' in currentQureyType?.toConfig();
-    if (isQueryExists) {
+    // GraphQLInputObjectType には getFields() 関数がいるので呼べるけど、エラーになるので一旦退避
+    // @ts-ignore
+    const isFieldsExists = currentQureyType.getFields();
+    if (isFieldsExists) {
         console.log('hoge');
     }
 
-    if (!(isQueryExists && !childQuery)) {
+    if (!(isFieldsExists && !childQuery)) {
         queryString = `${'    '.repeat(currentDepth)}${curerentQueryField.name}`;
         if (curerentQueryField.args.length > 0) {
             const map = getFieldArgsDict({
@@ -126,7 +128,7 @@ const generateGraphQLQuery = ({
         }
 
         if (childQuery) {
-            queryString += `{\n${childQuery}\n${'    '.repeat(currentDepth)}}`;
+            queryString += ` {\n${childQuery}\n${'    '.repeat(currentDepth)}}`;
         }
     }
 }
