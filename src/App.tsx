@@ -4,9 +4,11 @@
     - react, react-dom, urql, chakra-ui は devDependencies に入れる
 */
 
+import { GraphUI } from './graphui/GraphUI';
+
 function App() {
   return (
-    <>hoge</>
+    <GraphUI />
   )
 }
 
