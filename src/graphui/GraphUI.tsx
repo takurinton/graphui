@@ -297,7 +297,8 @@ export const GraphUI = ({
     // query to astnode
     const [ast, setAst] = useState<DocumentNode | any>(null);
     // fields
-    const [fields, setFields] = useState(getFields({ schema, name: queryName }));
+    const fields = getFields({ schema, name: queryName });
+    const [selectedFields, setSelectedFields] = useState(fields);
 
     useEffect(() => {
         const _ast = parse(query);
@@ -315,6 +316,12 @@ export const GraphUI = ({
         setAst(parse(newQuery));
     }, [queryName, query]);
 
+
+    const handleChangeFields = useCallback((newValue) => {
+        console.log(newValue);
+        setSelectedFields(newValue);
+    }, [selectedFields]);
+
     return (
         <>
             <Provider
@@ -331,12 +338,13 @@ export const GraphUI = ({
                 </Flex>
                 <Box>
                     <Select
-                        defaultValue={fields}
+                        defaultValue={selectedFields}
                         isMulti
                         name="colors"
                         options={fields}
                         className="basic-multi-select"
                         classNamePrefix="select"
+                        onChange={handleChangeFields}
                     />
                 </Box>
                 <Box>
