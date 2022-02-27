@@ -76,12 +76,12 @@ const generateGraphQLQuery = ({
         // 例えばネストしてる場合、これは再帰的に generateQuery 関数を呼ぶ必要がある
         childQuery = Object.keys(fields)
             .map(field => {
-                return `${'    '.repeat(currentDepth + 2)}${field}`;
+                return `${'  '.repeat(currentDepth + 1)}${field}`;
             }).join('\n');
     }
 
     if (!('query' in currentQureyType?.toConfig() && !childQuery)) {
-        queryString = `${'    '.repeat(currentDepth)}${curerentQueryField.name}`;
+        queryString = `${' '.repeat(currentDepth)}${curerentQueryField.name}`;
         if (curerentQueryField.args.length > 0) {
             const map = getFieldArgsDict({
                 curerentQueryField,
@@ -98,7 +98,7 @@ const generateGraphQLQuery = ({
         }
 
         if (childQuery) {
-            queryString += ` {\n${childQuery}\n${'    '.repeat(currentDepth)}}`;
+            queryString += ` {\n${childQuery}\n${' '.repeat(currentDepth)}}`;
         }
     }
     return queryString;
@@ -300,7 +300,7 @@ const SelectBox = ({
             <Select
                 defaultValue={selectedFields}
                 isMulti
-                name="colors"
+                name="fields"
                 options={fields}
                 className="basic-multi-select"
                 classNamePrefix="select"
@@ -322,7 +322,7 @@ export const GraphUI = ({
     const [queryName, setQueryName] = useState(initialQueryName);
     // set current query string
     const [query, setQuery] = useState(`query ${queryName} {
-    ${querysMap[initialQueryName]}
+  ${querysMap[initialQueryName]}
 }`)
     // query to astnode
     const [ast, setAst] = useState<DocumentNode | any>(parse(query));
@@ -333,7 +333,7 @@ export const GraphUI = ({
     const handleChangeQueryName = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         const newQuery = `query ${value} {
-    ${querysMap[initialQueryName]}
+  ${querysMap[initialQueryName]}
 }`;
 
         setQueryName(value);

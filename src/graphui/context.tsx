@@ -25,16 +25,40 @@ export const Provider = ({
             const values = newValue.map((v: any) => v.value);
             const newNode = visit(root, {
                 // SelectionSet: selection => {
-                //     console.log(selection)
+                //     console.log(selection.selections)
+                //     // ここは強引すぎる
+                //     // @ts-ignore
+                //     if (selection.selections[0].selectionSet === undefined) {
+                //         const newSelections = selection.selections.filter(selection => values.includes(selection.name.value));
+                //         return {
+                //             ...selection,
+                //             selections: newSelections,
+                //         }
+                //     }
                 // },
 
                 // field でみるのはなんか違う気がするけど、selectionSet だと一意に定まらないのでもう一度ドキュメントを読む
                 Field: field => {
-                    if (!values.includes(field.name.value)) {
-                        console.log(field.name.value)
-                        return undefined
+                    // if (field.name.value === 'me') {
+                    //     return {
+                    //         ...field,
+                    //         name: {
+                    //             ...field.name,
+                    //             value: 'hoge'
+                    //         }
+                    //     }
+                    // }
+
+                    if (field.name.value !== 'me' && !values.includes(field.name.value)) {
+                        // return {
+                        //     ...field,
+                        //     name: {
+                        //         ...field.name,
+                        //     }
+                        // }
+                        return undefined;
                     }
-                    return field;
+                    // return field;
                 }
             });
             onChangeNode(newNode);
