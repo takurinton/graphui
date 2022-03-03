@@ -20,14 +20,14 @@ import Select from 'react-select';
 
 // inspired by https://github.com/timqian/gql-generator/blob/20f76a0f37f31f961f8d5599cc115748c89fb614/index.js#L39-L55
 const getFieldArgsDict = ({
-    curerentQueryField,
+    currentQueryField,
     duplicateArgCounts,
     map = {},
 }: {
-    curerentQueryField: GraphQLField<any, any, any>
+    currentQueryField: GraphQLField<any, any, any>
     duplicateArgCounts: any;
     map: { [key: string]: any }
-}) => curerentQueryField.args.reduce((obj, argument) => {
+}) => currentQueryField.args.reduce((obj, argument) => {
     if (argument.name in duplicateArgCounts) {
         const index = duplicateArgCounts[argument.name] + 1;
         duplicateArgCounts[argument.name] = index;
@@ -57,20 +57,20 @@ const generateGraphQLQuery = ({
     duplicateArgCounts?: any;
     schema: string;
 }) => {
-    // geaphqlSchema も引数かな
-    const geaphqlSchema = buildSchema(schema);
+    // graphqlSchema も引数かな
+    const graphqlSchema = buildSchema(schema);
 
     // {me: {…}, user: {…}, allUsers: {…}}
     // 現在の node の AST を取得
-    const curerentQueryField = geaphqlSchema.toConfig().query?.getFields()[currentQueryName] as GraphQLField<any, any, any>;
-    const currentQueryTypeName = curerentQueryField.type.toString().replace(/[[\]!]/g, '');
-    const currentQureyType = geaphqlSchema.getType(currentQueryTypeName) as GraphQLNamedType;
+    const currentQueryField = graphqlSchema.toConfig().query?.getFields()[currentQueryName] as GraphQLField<any, any, any>;
+    const currentQueryTypeName = currentQueryField.type.toString().replace(/[[\]!]/g, '');
+    const currentQueryType = graphqlSchema.getType(currentQueryTypeName) as GraphQLNamedType;
     let queryString = '';
     let childQuery = '';
 
     // GraphQLInputObjectType には getFields() 関数がいるので呼べるけど、エラーになるので一旦退避
     // @ts-ignore
-    const fields = currentQureyType.getFields()
+    const fields = currentQueryType.getFields()
     if (fields) {
         // ここに関してはもう少し考慮することがある
         // 例えばネストしてる場合、これは再帰的に generateQuery 関数を呼ぶ必要がある
@@ -80,11 +80,11 @@ const generateGraphQLQuery = ({
             }).join('\n');
     }
 
-    if (!('query' in currentQureyType?.toConfig() && !childQuery)) {
-        queryString = `${' '.repeat(currentDepth)}${curerentQueryField.name}`;
-        if (curerentQueryField.args.length > 0) {
+    if (!('query' in currentQueryType?.toConfig() && !childQuery)) {
+        queryString = `${' '.repeat(currentDepth)}${currentQueryField.name}`;
+        if (currentQueryField.args.length > 0) {
             const map = getFieldArgsDict({
-                curerentQueryField,
+                currentQueryField,
                 duplicateArgCounts,
                 map: argumentsDict,
             });
@@ -127,13 +127,13 @@ const getFieldsForReactSelect = ({
     schema: string;
     name: string;
 }) => {
-    const geaphqlSchema = buildSchema(schema);
-    const curerentQueryField = geaphqlSchema.toConfig().query?.getFields()[name] as GraphQLField<any, any, any>;
-    const currentQueryTypeName = curerentQueryField.type.toString().replace(/[[\]!]/g, '');
-    const currentQureyType = geaphqlSchema.getType(currentQueryTypeName) as GraphQLNamedType;
+    const graphqlSchema = buildSchema(schema);
+    const currentQueryField = graphqlSchema.toConfig().query?.getFields()[name] as GraphQLField<any, any, any>;
+    const currentQueryTypeName = currentQueryField.type.toString().replace(/[[\]!]/g, '');
+    const currentQueryType = graphqlSchema.getType(currentQueryTypeName) as GraphQLNamedType;
 
     // @ts-ignore
-    return Object.keys(currentQureyType.getFields()).map(t => ({ value: t, label: t }));
+    return Object.keys(currentQueryType.getFields()).map(t => ({ value: t, label: t }));
 }
 
 // 以下は query の AST を触る
