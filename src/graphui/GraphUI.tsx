@@ -297,13 +297,45 @@ const SelectBox = ({
   )
 }
 
+const SelectQuery = ({
+  selectedQuery,
+  queries,
+  onChange,
+}: {
+  selectedQuery: { label: string; value: string };
+  queries: string[];
+  onChange: (newValue: any) => void;
+}) => {
+  const api = useTransformerContext();
+
+  const queriesForSelect = queries.map(query => ({ label: query, value: query }))
+  const handleChangeFields = useCallback((newValue) => {
+    api.updateNode(newValue);
+    onChange(newValue)
+  }, [selectedQuery]);
+
+  return (
+    <Box>
+      <Select
+        defaultValue={selectedQuery}
+        name="fields"
+        options={queriesForSelect}
+        className="basic-multi-select"
+        classNamePrefix="select"
+        onChange={handleChangeFields}
+      />
+    </Box>
+  )
+}
+
 export const GraphUI = ({
   schema
 }: {
   schema: string
 }) => {
   const querysMap = getQuerysMap({ schema });
-  const initialQueryName = Object.keys(querysMap)[0];
+  const queries = Object.keys(querysMap);
+  const initialQueryName = queries[0];
 
   // query name
   const [queryName, setQueryName] = useState(initialQueryName);
@@ -315,12 +347,10 @@ export const GraphUI = ({
   const [ast, setAst] = useState<DocumentNode | any>(parse(query));
   // fields
   const fields = getFieldsForReactSelect({ schema, name: queryName });
-  const [selectedFields, setSelectedFields] = useState(fields);
 
-  const handleChangeQueryName = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
+  const handleChangeQueryName = useCallback(({ label, value }) => {
     const newQuery = `query ${value} {
-  ${querysMap[initialQueryName]}
+  ${querysMap[value]}
 }`;
 
     setQueryName(value);
@@ -339,13 +369,12 @@ export const GraphUI = ({
       >
         <Flex>
           <chakra.p fontSize="md">query name: </chakra.p>
-          <Input size="md" placeholder='query name' value={queryName} onChange={(event) => handleChangeQueryName(event)} />
+          <SelectQuery
+            selectedQuery={{ label: initialQueryName, value: initialQueryName }}
+            queries={queries}
+            onChange={handleChangeQueryName}
+          />
         </Flex>
-        {/* <SelectBox
-          selectedFields={selectedFields}
-          fields={fields}
-          onChange={setSelectedFields}
-        /> */}
         {ast === null ? <>loading</> : <RootRenderer node={ast} />}
         <Box>
           {/* {ast === null ? <>loading</> : <RootRenderer node={ast} />} */}
