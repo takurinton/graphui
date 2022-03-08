@@ -136,32 +136,6 @@ const getFieldsForReactSelect = ({
   return Object.keys(currentQueryType.getFields()).map(t => ({ value: t, label: t }));
 }
 
-// 以下は query の AST を触る
-
-// query から field を取得する
-const getFieldByQuery = (node: ASTNode): ASTNode => {
-  if (node.kind === 'Document') {
-    return getFieldByQuery(node.definitions[0]);
-  }
-
-  if (node.kind === 'OperationDefinition') {
-    return getFieldByQuery(node.selectionSet);
-  }
-
-  if (node.kind === 'SelectionSet') {
-    return getFieldByQuery(node.selections);
-  }
-
-  if (node.kind === 'Field') {
-    if (node.selectionSet === undefined) {
-      return node.name;
-    }
-    return getFieldByQuery(node.selectionSet);
-  }
-
-  return {} as ASTNode;
-}
-
 const Indent = ({ children }: { children: React.ReactNode }) => {
   return <Box pl={4}>{children}</Box>;
 }
@@ -201,29 +175,42 @@ const RootRenderer = ({ node }: { node: ASTNode }) => {
   }
 
   if (node.kind === 'Field') {
+    if (node.selectionSet === undefined) {
+      if (node.arguments === []) {
+        return (
+          <Box d="inline">
+            <RootRenderer node={node.name} />
+            {node.alias && (
+              <>
+                <RootRenderer node={node.alias} />
+                {`: `}
+              </>
+            )}
+            {'('}
+            {node.arguments && (
+              <Indent>
+                {node.arguments.map((arg, idx) => {
+                  return <RootRenderer key={idx} node={arg} />;
+                })}
+              </Indent>
+            )}
+            {')'}
+            {node.directives?.map((t, idx) => {
+              return <RootRenderer key={idx} node={t} />;
+            })}
+          </Box>
+        );
+      }
+      return <RootRenderer node={node.name} />
+    }
     return (
       <Box d="inline">
-        {node.alias && (
-          <>
-            <RootRenderer node={node.alias} />
-            {`: `}
-          </>
-        )}
         <RootRenderer node={node.name} />
-        {'('}
-        {node.arguments && (
-          <Indent>
-            {node.arguments.map((arg, idx) => {
-              return <RootRenderer key={idx} node={arg} />;
-            })}
-          </Indent>
-        )}
-        {')'}
-        {node.directives?.map((t, idx) => {
-          return <RootRenderer key={idx} node={t} />;
-        })}
+        {' {'}
+        <RootRenderer node={node.selectionSet} />
+        {'}'}
       </Box>
-    );
+    )
   }
   if (node.kind === 'Argument') {
     return (
@@ -354,11 +341,12 @@ export const GraphUI = ({
           <chakra.p fontSize="md">query name: </chakra.p>
           <Input size="md" placeholder='query name' value={queryName} onChange={(event) => handleChangeQueryName(event)} />
         </Flex>
-        <SelectBox
+        {/* <SelectBox
           selectedFields={selectedFields}
           fields={fields}
           onChange={setSelectedFields}
-        />
+        /> */}
+        {ast === null ? <>loading</> : <RootRenderer node={ast} />}
         <Box>
           {/* {ast === null ? <>loading</> : <RootRenderer node={ast} />} */}
           <Box pb={3} />
